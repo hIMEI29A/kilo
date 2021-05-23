@@ -1,5 +1,7 @@
 # kilo text editor in Golang
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/hIMEI29A/kilo.svg)](https://pkg.go.dev/github.com/hIMEI29A/kilo)
+
 I did [Build Your Own Text Editor](http://viewsourcecode.org/snaptoken/kilo/index.html)
 only in Go instead of C. I tried to keep the spirit of `kilo`: a single
 file of source code, everything as simple as possible.
