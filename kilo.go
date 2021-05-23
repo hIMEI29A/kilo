@@ -129,7 +129,7 @@ var HLDB []editorSyntax = []editorSyntax{
 /*** terminal ***/
 
 func die(err error) {
-	disableRawMode()
+	DisableRawMode()
 	io.WriteString(os.Stdout, "\x1b[2J")
 	io.WriteString(os.Stdout, "\x1b[H")
 	log.Fatal(err)
@@ -151,7 +151,7 @@ func TcGetAttr(fd uintptr) *Termios {
 	return termios
 }
 
-func enableRawMode() {
+func EnableRawMode() {
 	E.origTermios = TcGetAttr(os.Stdin.Fd())
 	var raw Termios
 	raw = *E.origTermios
@@ -166,7 +166,7 @@ func enableRawMode() {
 	}
 }
 
-func disableRawMode() {
+func DisableRawMode() {
 	if e := TcSetAttr(os.Stdin.Fd(), E.origTermios); e != nil {
 		log.Fatalf("Problem disabling raw mode: %s\n", e)
 	}
@@ -634,7 +634,7 @@ func editorRowsToString() (string, int) {
 	return buf, totlen
 }
 
-func editorOpen(filename string) {
+func EditorOpen(filename string) {
 	E.filename = filename
 	editorSelectSyntaxHighlight()
 	fd, err := os.Open(filename)
@@ -665,7 +665,7 @@ func editorSave() {
 	if E.filename == "" {
 		E.filename = editorPrompt("Save as: %q", nil)
 		if E.filename == "" {
-			editorSetStatusMessage("Save aborted")
+			EditorSetStatusMessage("Save aborted")
 			return
 		}
 		editorSelectSyntaxHighlight()
@@ -673,7 +673,7 @@ func editorSave() {
 	buf, len := editorRowsToString()
 	fp, e := os.OpenFile(E.filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if e != nil {
-		editorSetStatusMessage("Can't save! file open error %s", e)
+		EditorSetStatusMessage("Can't save! file open error %s", e)
 		return
 	}
 	defer fp.Close()
@@ -681,13 +681,13 @@ func editorSave() {
 	if err == nil {
 		if n == len {
 			E.dirty = false
-			editorSetStatusMessage("%d bytes written to disk", len)
+			EditorSetStatusMessage("%d bytes written to disk", len)
 		} else {
-			editorSetStatusMessage(fmt.Sprintf("wanted to write %d bytes to file, wrote %d", len, n))
+			EditorSetStatusMessage(fmt.Sprintf("wanted to write %d bytes to file, wrote %d", len, n))
 		}
 		return
 	}
-	editorSetStatusMessage("Can't save! I/O error %s", err)
+	EditorSetStatusMessage("Can't save! I/O error %s", err)
 }
 
 /*** find ***/
@@ -770,8 +770,8 @@ func editorPrompt(prompt string, callback func([]byte, int)) string {
 	var buf []byte
 
 	for {
-		editorSetStatusMessage(prompt, buf)
-		editorRefreshScreen()
+		EditorSetStatusMessage(prompt, buf)
+		EditorRefreshScreen()
 
 		c := editorReadKey()
 
@@ -780,14 +780,14 @@ func editorPrompt(prompt string, callback func([]byte, int)) string {
 				buf = buf[:len(buf)-1]
 			}
 		} else if c == '\x1b' {
-			editorSetStatusMessage("")
+			EditorSetStatusMessage("")
 			if callback != nil {
 				callback(buf, c)
 			}
 			return ""
 		} else if c == '\r' {
 			if len(buf) != 0 {
-				editorSetStatusMessage("")
+				EditorSetStatusMessage("")
 				if callback != nil {
 					callback(buf, c)
 				}
@@ -843,7 +843,7 @@ func editorMoveCursor(key int) {
 
 var quitTimes int = KILO_QUIT_TIMES
 
-func editorProcessKeypress() {
+func EditorProcessKeypress() {
 	c := editorReadKey()
 	switch c {
 	case '\r':
@@ -851,13 +851,13 @@ func editorProcessKeypress() {
 		break
 	case ('q' & 0x1f):
 		if E.dirty && quitTimes > 0 {
-			editorSetStatusMessage("Warning!!! File has unsaved changes. Press Ctrl-Q %d more times to quit.", quitTimes)
+			EditorSetStatusMessage("Warning!!! File has unsaved changes. Press Ctrl-Q %d more times to quit.", quitTimes)
 			quitTimes--
 			return
 		}
 		io.WriteString(os.Stdout, "\x1b[2J")
 		io.WriteString(os.Stdout, "\x1b[H")
-		disableRawMode()
+		DisableRawMode()
 		os.Exit(0)
 	case ('s' & 0x1f):
 		editorSave()
@@ -924,7 +924,7 @@ func editorScroll() {
 	}
 }
 
-func editorRefreshScreen() {
+func EditorRefreshScreen() {
 	editorScroll()
 	ab := bytes.NewBufferString("\x1b[25l")
 	ab.WriteString("\x1b[H")
@@ -1051,33 +1051,17 @@ func editorDrawMessageBar(ab *bytes.Buffer) {
 	}
 }
 
-func editorSetStatusMessage(args ...interface{}) {
+func EditorSetStatusMessage(args ...interface{}) {
 	E.statusmsg = fmt.Sprintf(args[0].(string), args[1:]...)
 	E.statusmsg_time = time.Now()
 }
 
 /*** init ***/
 
-func initEditor() {
+func InitEditor() {
 	// Initialization a la C not necessary.
 	if getWindowSize(&E.screenRows, &E.screenCols) == -1 {
 		die(fmt.Errorf("couldn't get screen size"))
 	}
 	E.screenRows -= 2
-}
-
-func main() {
-	enableRawMode()
-	defer disableRawMode()
-	initEditor()
-	if len(os.Args) > 1 {
-		editorOpen(os.Args[1])
-	}
-
-	editorSetStatusMessage("HELP: Ctrl-S = save | Ctrl-Q = quit | Ctrl-F = find")
-
-	for {
-		editorRefreshScreen()
-		editorProcessKeypress()
-	}
 }
