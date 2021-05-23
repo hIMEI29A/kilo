@@ -1,7 +1,7 @@
 package main
 
 import (
-	"kilo"
+	"github.com/hIMEI29A/kilo"
 	"os"
 )
 
